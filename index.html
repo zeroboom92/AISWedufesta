@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR 리워드 시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #334155;
+            padding: 1rem;
+        }
+        .container {
+            max-width: 42rem;
+            width: 100%;
+            background-color: #ffffff;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05), 0 6px 6px rgba(0, 0, 0, 0.1);
+            padding: 2.5rem;
+            text-align: center;
+            transition: transform 0.3s ease-in-out;
+        }
+        .container:hover {
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+<div class="container mx-auto p-8 bg-white rounded-3xl shadow-lg border border-gray-200">
+    <div class="space-y-6">
+        <h1 class="text-4xl font-extrabold text-gray-800">QR 리워드 이벤트</h1>
+        <p id="status-message" class="text-gray-600 text-lg">QR 코드 스캔 중...</p>
+        <div class="bg-gray-100 p-6 rounded-2xl border border-gray-200 shadow-inner">
+            <h2 class="text-2xl font-bold text-gray-700 mb-2">현재 누적 스캔 수</h2>
+            <div class="flex justify-center items-center">
+                <span id="scan-count" class="text-6xl font-bold text-blue-600 transition-all duration-500 ease-out">0</span>
+                <span class="text-4xl font-light text-gray-400"> / 5</span>
+            </div>
+        </div>
+        <p id="reward-message" class="text-green-600 font-bold text-xl hidden">축하합니다! 5개의 QR코드를 모두 스캔했습니다. 운영본부에서 리워드를 받아가세요!</p>
+        <div id="alert-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+            <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                <div class="mt-3 text-center">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">리워드 수령 안내</h3>
+                    <div class="mt-2 px-7 py-3">
+                        <p id="alert-message" class="text-sm text-gray-500"></p>
+                    </div>
+                    <div class="items-center px-4 py-3">
+                        <button id="alert-ok-btn" class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            확인
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button id="reward-button" class="mt-8 w-full py-4 px-6 bg-blue-600 text-white font-bold text-xl rounded-full shadow-md transition-all duration-300 hover:bg-blue-700 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 hidden">
+            리워드 받기
+        </button>
+    </div>
+</div>
+
+<script>
+    // QR코드를 스캔했을 때 넘겨받는 QR ID를 URL에서 가져옵니다.
+    const urlParams = new URLSearchParams(window.location.search);
+    const qrId = urlParams.get('qr_id');
+
+    const statusMessage = document.getElementById('status-message');
+    const scanCount = document.getElementById('scan-count');
+    const rewardMessage = document.getElementById('reward-message');
+    const rewardButton = document.getElementById('reward-button');
+    const rewardGoal = 5; // 목표 스캔 횟수
+
+    // 모달 관련 요소
+    const alertModal = document.getElementById('alert-modal');
+    const alertMessage = document.getElementById('alert-message');
+    const alertOkBtn = document.getElementById('alert-ok-btn');
+
+    // 사용자 정의 모달을 표시하는 함수
+    function showAlert(message) {
+        alertMessage.textContent = message;
+        alertModal.classList.remove('hidden');
+    }
+
+    // 사용자 정의 모달을 숨기는 함수
+    alertOkBtn.addEventListener('click', () => {
+        alertModal.classList.add('hidden');
+    });
+
+    // 1. 사용자 ID 생성 또는 가져오기
+    // 로컬 스토리지에서 사용자 ID가 있는지 확인합니다.
+    let userId = localStorage.getItem('userId');
+    if (!userId) {
+        // 사용자 ID가 없으면 새로운 ID를 생성하고 로컬 스토리지에 저장합니다.
+        userId = 'user_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('userId', userId);
+        console.log("새로운 사용자 ID 생성: ", userId);
+    } else {
+        console.log("기존 사용자 ID: ", userId);
+    }
+
+    // 2. 앱스 스크립트로 데이터 전송 및 응답 받기
+    // 여기에 당신의 구글 앱스 스크립트 배포 URL을 입력하세요.
+    const appsScriptURL = 'https://script.google.com/macros/s/AKfycbwNp3P82ftOx--C3z8TBg16i3qb7dTCNG3BNj1S3ei9Zm5UPopQSKkN3MAoe-OYNnXZ/exec';
+    
+    // QR ID가 유효한지 확인합니다.
+    if (!qrId) {
+        statusMessage.textContent = '올바른 QR코드가 아닙니다.';
+        console.error("QR ID가 URL에 없습니다.");
+    } else {
+        statusMessage.textContent = '스캔 기록을 확인 중입니다...';
+
+        // 앱스 스크립트로 GET 요청을 보냅니다.
+        fetch(`${appsScriptURL}?user_id=${userId}&qr_id=${qrId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // 성공적으로 응답을 받았을 때 UI를 업데이트합니다.
+                    if (data.is_new_scan) {
+                        statusMessage.textContent = '새로운 QR코드를 스캔했습니다!';
+                    } else {
+                        statusMessage.textContent = '이미 스캔한 QR코드입니다.';
+                    }
+                    scanCount.textContent = data.total_scans;
+
+                    // 목표 횟수에 도달했는지 확인합니다.
+                    if (data.total_scans >= rewardGoal) {
+                        rewardMessage.classList.remove('hidden');
+                        rewardButton.classList.remove('hidden');
+                        statusMessage.textContent = '축하합니다!';
+                    }
+
+                } else {
+                    // 오류가 발생했을 때 메시지를 표시합니다.
+                    statusMessage.textContent = `오류: ${data.message}`;
+                    console.error('앱스 스크립트에서 오류가 발생했습니다:', data.message);
+                }
+            })
+            .catch(error => {
+                // 네트워크 오류 또는 기타 예외를 처리합니다.
+                statusMessage.textContent = '네트워크 오류가 발생했습니다. 다시 시도해 주세요.';
+                console.error('Fetch 오류:', error);
+            });
+    }
+
+    // 리워드 받기 버튼 클릭 이벤트 핸들러
+    rewardButton.addEventListener('click', () => {
+        const authKey = `${userId}-${rewardGoal}`; // 간단한 인증 키 생성
+        showAlert(`리워드 수령을 위해 이 화면을 운영본부에 보여주세요. 인증번호: ${authKey}`);
+    });
+</script>
+</body>
+</html>
