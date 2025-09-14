@@ -3,63 +3,89 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>QR 스탬프</title>
+<title>체험 스탬프</title>
 <style>
-  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif; max-width: 540px; margin: 24px auto; padding: 0 14px; }
-  header { display:flex; justify-content: space-between; align-items:center; }
-  h1 { font-size: 20px; margin: 0; }
-  .tag { font-size: 12px; opacity: .7; }
+  :root { --maxw: 540px; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+         max-width: var(--maxw); margin: 0 auto; padding: 0 14px 24px; background: #ffffff; color: #111; }
+  header { margin: 0 calc(50vw - min(50vw, var(--maxw)/2)); }
+  .banner { width: 100vw; max-width: 100%; height: auto; display: block; object-fit: cover; }
+  h1 { font-size: 20px; margin: 16px 0 8px; }
+  .notice { background: #f6f7f9; padding: 12px; border-radius: 10px; line-height: 1.5; }
   .board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 16px 0; }
   .slot { border: 2px dashed #bbb; border-radius: 14px; aspect-ratio: 1/1;
           display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 20px; background:#fafafa; }
   .filled { border-style: solid; background: #fff; }
-  .notice { background: #f6f7f9; padding: 12px; border-radius: 10px; line-height: 1.4; }
   .btnbar { display:flex; gap:8px; margin-top:10px; }
-  button { padding: 12px; border: 0; border-radius: 12px; font-weight: 700; cursor: pointer; background:#efefef; }
-  .ok { background: #d6f5d6; }
-  .warn { background: #ffe9c9; }
+  button { padding: 12px; border: 0; border-radius: 12px; font-weight: 700; cursor: pointer; background:#efefef; flex:1; }
+  .primary { background: #d6f5d6; }
+  .danger { background: #ffe1e1; }
   .muted { font-size:12px; opacity:.7; margin-top:8px; }
   .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
            background: rgba(0,0,0,.85); color:#fff; padding:10px 14px; border-radius: 10px; font-size:14px; display:none; }
 </style>
 </head>
 <body>
+  <!-- 상단 배너 -->
   <header>
-    <h1>체험 스탬프</h1>
-    <div class="tag" id="roundTag">라운드 1</div>
+    <img id="banner" class="banner" alt="행사 배너" />
   </header>
 
-  <div id="progress" class="notice">불러오는 중…</div>
-  <div id="board" class="board"></div>
+  <main style="padding-top:12px;">
+    <h1>체험 스탬프</h1>
 
-  <div class="btnbar">
-    <button id="reset5" class="ok">다음 5개 세트 시작</button>
-    <button id="resetAll" class="warn">전체 초기화</button>
-  </div>
-  <div class="muted">※ 같은 부스 QR은 중복으로 찍히지 않습니다(같은 기기 기준).</div>
+    <div id="progress" class="notice">불러오는 중…</div>
+    <div id="board" class="board"></div>
+
+    <div class="btnbar">
+      <button id="redeem" class="primary">간식 수령하기</button>
+      <button id="resetAll" class="danger">전체 초기화</button>
+    </div>
+    <div class="muted">※ 같은 부스 QR은 중복으로 찍히지 않습니다(같은 기기 기준).</div>
+  </main>
 
   <div id="toast" class="toast"></div>
 
 <script>
-  // ===== 설정 =====
-  const SET_SIZE = 5;          // 5개 채우면 보상
-  const MAX_SLOTS = 10;        // 화면에 보여줄 칸 수 (원하면 5로 줄여도 됨)
-  const STORAGE_KEY = "qr_stamp_scanned_booths";  // 스캔한 부스 목록(Set 저장)
-  const STORAGE_ROUNDS = "qr_stamp_round";        // 몇 번째 5세트인지(0부터 시작)
+  // ===== 설정값 =====
+  const BANNER_URL = "https://images.unsplash.com/photo-1514511547117-f9c4a0b6a1f7?q=80&w=1600&auto=format&fit=crop"; // 행사 배너 이미지 URL로 교체
+  const SET_SIZE   = 5;            // 5개 채우면 보상
+  const MAX_SLOTS  = 10;           // 화면에 보여줄 칸 수(원하면 5로 줄여도 됨)
+  const ADMIN_PASS = "0425";       // 관리자 비밀번호(현장 운영용, 소스에 노출되는 점 유의)
+
+  // ===== 저장 키 =====
+  const STORAGE_SCANNED   = "qr_stamp_scanned_booths"; // Set(JSON 배열)
+  const STORAGE_REDEEMED  = "qr_stamp_redeemed_count"; // 정수(수령 횟수)
 
   // ===== 요소 =====
-  const $board = document.querySelector("#board");
-  const $progress = document.querySelector("#progress");
-  const $reset5 = document.querySelector("#reset5");
-  const $resetAll = document.querySelector("#resetAll");
-  const $roundTag = document.querySelector("#roundTag");
-  const $toast = document.querySelector("#toast");
+  const $banner    = document.querySelector("#banner");
+  const $board     = document.querySelector("#board");
+  const $progress  = document.querySelector("#progress");
+  const $redeem    = document.querySelector("#redeem");
+  const $resetAll  = document.querySelector("#resetAll");
+  const $toast     = document.querySelector("#toast");
 
-  // ===== 상태 =====
+  // ===== 초기 상태 =====
+  $banner.src = BANNER_URL;
+
   const PARAMS = new URLSearchParams(location.search);
-  const booth = PARAMS.get("booth"); // 예: A01, B02 …
-  const scanned = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"));
-  let round = parseInt(localStorage.getItem(STORAGE_ROUNDS) || "0", 10);
+  const boothParam = PARAMS.get("booth"); // 예: A01, B02 …
+
+  const scanned = new Set(JSON.parse(localStorage.getItem(STORAGE_SCANNED) || "[]"));
+  let redeemedCount = parseInt(localStorage.getItem(STORAGE_REDEEMED) || "0", 10);
+
+  // ===== 유틸 =====
+  function save() {
+    localStorage.setItem(STORAGE_SCANNED, JSON.stringify([...scanned]));
+    localStorage.setItem(STORAGE_REDEEMED, String(redeemedCount));
+  }
+
+  function stampsInCurrentCycle() {
+    // 현재 사이클의 도장 수 = 총 스캔 수 - (수령 횟수 * 5), 0~5로 클램프
+    const total = scanned.size;
+    const done  = redeemedCount * SET_SIZE;
+    return Math.max(0, Math.min(SET_SIZE, total - done));
+  }
 
   function showToast(msg) {
     $toast.textContent = msg;
@@ -67,80 +93,80 @@
     setTimeout(() => $toast.style.display = "none", 1400);
   }
 
-  function save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...scanned]));
-    localStorage.setItem(STORAGE_ROUNDS, String(round));
-  }
+  function render() {
+    const inCycle = stampsInCurrentCycle();
+    const total   = scanned.size;
 
-  function currentRoundCount() {
-    const total = scanned.size;
-    const doneBefore = round * SET_SIZE;
-    return Math.max(0, Math.min(SET_SIZE, total - doneBefore));
-  }
-
-  function paintRoundTag() {
-    $roundTag.textContent = `라운드 ${round + 1}`;
-  }
-
-  function renderBoard() {
     $board.innerHTML = "";
-    const filled = currentRoundCount();
     for (let i = 0; i < MAX_SLOTS; i++) {
       const div = document.createElement("div");
-      div.className = "slot" + (i < filled ? " filled" : "");
-      div.textContent = i < filled ? "★" : "·";
+      div.className = "slot" + (i < inCycle ? " filled" : "");
+      div.textContent = i < inCycle ? "★" : "·";
       $board.appendChild(div);
     }
-    const total = scanned.size;
+
     $progress.innerHTML = `
-      <b>이번 라운드</b>: ${filled}/${SET_SIZE}개 &nbsp; | &nbsp; <b>누적</b>: ${total}개
+      <b>이번 세트</b>: ${inCycle}/${SET_SIZE}개 &nbsp; | &nbsp; 
+      <b>누적 도장</b>: ${total}개 &nbsp; | &nbsp; 
+      <b>수령 완료</b>: ${redeemedCount}회
     `;
-    paintRoundTag();
+
+    // 5개 미만이면 수령 버튼 비활성화 느낌 주기(필수는 아님)
+    $redeem.disabled = inCycle < SET_SIZE;
+    $redeem.style.opacity = inCycle < SET_SIZE ? 0.6 : 1;
   }
 
   function tryStamp(boothCode) {
-    if (!boothCode) { renderBoard(); return; }
+    if (!boothCode) { render(); return; }
     const key = String(boothCode).trim().toUpperCase();
 
     if (scanned.has(key)) {
       showToast("이미 찍은 QR입니다.");
-      renderBoard();
+      render();
       return;
     }
+
     scanned.add(key);
     save();
-    const cnt = currentRoundCount();
-    renderBoard();
+    render();
 
-    if (cnt >= SET_SIZE) {
-      setTimeout(() => {
-        alert("축하합니다! 5개 달성 🎉 직원에게 보여주세요.");
-        // 다음 라운드로 이동(누적은 유지)
-        round += 1;
-        save();
-        renderBoard();
-      }, 50);
+    if (stampsInCurrentCycle() >= SET_SIZE) {
+      // 5개 채워졌지만, 이제는 자동 진행하지 않고 '간식 수령하기'로 처리
+      showToast("5개 달성! 간식 수령하기 버튼을 눌러주세요.");
     } else {
       showToast("도장을 추가했어요!");
     }
   }
 
-  // 버튼
-  $reset5.onclick = () => {
-    round += 1; save(); renderBoard();
-    showToast("다음 5개 세트를 시작합니다!");
+  // ===== 버튼 동작 =====
+  $redeem.onclick = () => {
+    if (stampsInCurrentCycle() < SET_SIZE) {
+      showToast("아직 도장이 부족합니다.");
+      return;
+    }
+    const pwd = prompt("관리자 비밀번호를 입력하세요.");
+    if (pwd === null) return; // 취소
+    if (pwd !== ADMIN_PASS) {
+      alert("비밀번호가 올바르지 않습니다.");
+      return;
+    }
+    // 수령 처리: 세트 하나 차감 → 다음 세트 대기
+    redeemedCount += 1;
+    save();
+    render();
+    alert("수령 처리되었습니다. 다음 세트를 시작하세요!");
   };
 
   $resetAll.onclick = () => {
     if (!confirm("전체 초기화할까요? (모든 기록 삭제)")) return;
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(STORAGE_ROUNDS);
+    localStorage.removeItem(STORAGE_SCANNED);
+    localStorage.removeItem(STORAGE_REDEEMED);
     location.reload();
   };
 
-  // 시작
-  renderBoard();
-  tryStamp(booth);
+  // ===== 시작 =====
+  render();
+  tryStamp(boothParam);
 </script>
 </body>
 </html>
