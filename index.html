@@ -1,202 +1,146 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR 리워드 시스템</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f4f8;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            color: #334155;
-            padding: 1rem;
-        }
-        .container {
-            max-width: 42rem;
-            width: 100%;
-            background-color: #ffffff;
-            border-radius: 1.5rem;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05), 0 6px 6px rgba(0, 0, 0, 0.1);
-            padding: 2.5rem;
-            text-align: center;
-            transition: transform 0.3s ease-in-out;
-        }
-        .container:hover {
-            transform: translateY(-5px);
-        }
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background: #ffffff;
-            padding: 2rem;
-            border-radius: 1rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-            text-align: center;
-            max-width: 90%;
-        }
-        .modal-button {
-            margin-top: 1rem;
-            padding: 0.75rem 2rem;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 0.5rem;
-            cursor: pointer;
-        }
-        .text-blue-600 {
-            color: #2563EB;
-        }
-        .text-green-600 {
-            color: #16A34A;
-        }
-    </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>QR 스탬프</title>
+<style>
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif; max-width: 540px; margin: 24px auto; padding: 0 14px; }
+  header { display:flex; justify-content: space-between; align-items:center; }
+  h1 { font-size: 20px; margin: 0; }
+  .tag { font-size: 12px; opacity: .7; }
+  .board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 16px 0; }
+  .slot { border: 2px dashed #bbb; border-radius: 14px; aspect-ratio: 1/1;
+          display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 20px; background:#fafafa; }
+  .filled { border-style: solid; background: #fff; }
+  .notice { background: #f6f7f9; padding: 12px; border-radius: 10px; line-height: 1.4; }
+  .btnbar { display:flex; gap:8px; margin-top:10px; }
+  button { padding: 12px; border: 0; border-radius: 12px; font-weight: 700; cursor: pointer; background:#efefef; }
+  .ok { background: #d6f5d6; }
+  .warn { background: #ffe9c9; }
+  .muted { font-size:12px; opacity:.7; margin-top:8px; }
+  .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+           background: rgba(0,0,0,.85); color:#fff; padding:10px 14px; border-radius: 10px; font-size:14px; display:none; }
+</style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+<body>
+  <header>
+    <h1>체험 스탬프</h1>
+    <div class="tag" id="roundTag">라운드 1</div>
+  </header>
 
-<div class="container mx-auto p-8 bg-white rounded-3xl shadow-lg border border-gray-200">
-    <div class="space-y-6">
-        <h1 class="text-4xl font-extrabold text-gray-800">QR 리워드 이벤트</h1>
-        <p id="status-message" class="text-gray-600 text-lg">QR 코드 스캔 중...</p>
-        <div class="bg-gray-100 p-6 rounded-2xl border border-gray-200 shadow-inner">
-            <h2 class="text-2xl font-bold text-gray-700 mb-2">현재 누적 스캔 수</h2>
-            <div class="flex justify-center items-center">
-                <span id="scan-count" class="text-6xl font-bold text-blue-600 transition-all duration-500 ease-out">0</span>
-                <span class="text-4xl font-light text-gray-400"> / 5</span>
-            </div>
-        </div>
-        <p id="reward-message" class="text-green-600 font-bold text-xl hidden">축하합니다! 5개의 QR코드를 모두 스캔했습니다. 운영본부에서 리워드를 받아가세요!</p>
-        <button id="reward-button" class="mt-8 w-full py-4 px-6 bg-blue-600 text-white font-bold text-xl rounded-full shadow-md transition-all duration-300 hover:bg-blue-700 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 hidden">
-            리워드 받기
-        </button>
-    </div>
-</div>
+  <div id="progress" class="notice">불러오는 중…</div>
+  <div id="board" class="board"></div>
+
+  <div class="btnbar">
+    <button id="reset5" class="ok">다음 5개 세트 시작</button>
+    <button id="resetAll" class="warn">전체 초기화</button>
+  </div>
+  <div class="muted">※ 같은 부스 QR은 중복으로 찍히지 않습니다(같은 기기 기준).</div>
+
+  <div id="toast" class="toast"></div>
 
 <script>
-    // QR코드를 스캔했을 때 넘겨받는 QR ID를 URL에서 가져옵니다.
-    const urlParams = new URLSearchParams(window.location.search);
-    const qrId = urlParams.get('qr_id');
+  // ===== 설정 =====
+  const SET_SIZE = 5;          // 5개 채우면 보상
+  const MAX_SLOTS = 10;        // 화면에 보여줄 칸 수 (원하면 5로 줄여도 됨)
+  const STORAGE_KEY = "qr_stamp_scanned_booths";  // 스캔한 부스 목록(Set 저장)
+  const STORAGE_ROUNDS = "qr_stamp_round";        // 몇 번째 5세트인지(0부터 시작)
 
-    const statusMessage = document.getElementById('status-message');
-    const scanCount = document.getElementById('scan-count');
-    const rewardMessage = document.getElementById('reward-message');
-    const rewardButton = document.getElementById('reward-button');
-    const rewardGoal = 5; // 목표 스캔 횟수
-    const modalId = 'my-modal'; // 모달 ID
+  // ===== 요소 =====
+  const $board = document.querySelector("#board");
+  const $progress = document.querySelector("#progress");
+  const $reset5 = document.querySelector("#reset5");
+  const $resetAll = document.querySelector("#resetAll");
+  const $roundTag = document.querySelector("#roundTag");
+  const $toast = document.querySelector("#toast");
 
-    // 1. 사용자 ID 생성 또는 가져오기
-    // 로컬 스토리지에서 사용자 ID가 있는지 확인합니다.
-    let userId = localStorage.getItem('userId');
-    if (!userId) {
-        // 사용자 ID가 없으면 새로운 ID를 생성하고 로컬 스토리지에 저장합니다.
-        userId = 'user_' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('userId', userId);
-        console.log(\"새로운 사용자 ID 생성: \", userId);
+  // ===== 상태 =====
+  const PARAMS = new URLSearchParams(location.search);
+  const booth = PARAMS.get("booth"); // 예: A01, B02 …
+  const scanned = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"));
+  let round = parseInt(localStorage.getItem(STORAGE_ROUNDS) || "0", 10);
+
+  function showToast(msg) {
+    $toast.textContent = msg;
+    $toast.style.display = "block";
+    setTimeout(() => $toast.style.display = "none", 1400);
+  }
+
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...scanned]));
+    localStorage.setItem(STORAGE_ROUNDS, String(round));
+  }
+
+  function currentRoundCount() {
+    const total = scanned.size;
+    const doneBefore = round * SET_SIZE;
+    return Math.max(0, Math.min(SET_SIZE, total - doneBefore));
+  }
+
+  function paintRoundTag() {
+    $roundTag.textContent = `라운드 ${round + 1}`;
+  }
+
+  function renderBoard() {
+    $board.innerHTML = "";
+    const filled = currentRoundCount();
+    for (let i = 0; i < MAX_SLOTS; i++) {
+      const div = document.createElement("div");
+      div.className = "slot" + (i < filled ? " filled" : "");
+      div.textContent = i < filled ? "★" : "·";
+      $board.appendChild(div);
+    }
+    const total = scanned.size;
+    $progress.innerHTML = `
+      <b>이번 라운드</b>: ${filled}/${SET_SIZE}개 &nbsp; | &nbsp; <b>누적</b>: ${total}개
+    `;
+    paintRoundTag();
+  }
+
+  function tryStamp(boothCode) {
+    if (!boothCode) { renderBoard(); return; }
+    const key = String(boothCode).trim().toUpperCase();
+
+    if (scanned.has(key)) {
+      showToast("이미 찍은 QR입니다.");
+      renderBoard();
+      return;
+    }
+    scanned.add(key);
+    save();
+    const cnt = currentRoundCount();
+    renderBoard();
+
+    if (cnt >= SET_SIZE) {
+      setTimeout(() => {
+        alert("축하합니다! 5개 달성 🎉 직원에게 보여주세요.");
+        // 다음 라운드로 이동(누적은 유지)
+        round += 1;
+        save();
+        renderBoard();
+      }, 50);
     } else {
-        console.log(\"기존 사용자 ID: \", userId);
+      showToast("도장을 추가했어요!");
     }
+  }
 
-    // 2. Firebase Cloud Function으로 데이터 전송 및 응답 받기
-    // 여기에 당신의 Firebase Cloud Function URL을 입력하세요.
-    const firebaseFunctionURL = 'https://qrscan-nv6nzpfvna-uc.a.run.app';
-    
-    // QR ID가 유효한지 확인합니다.
-    if (!qrId) {
-        statusMessage.textContent = '올바른 QR코드가 아닙니다.';
-        console.error(\"QR ID가 URL에 없습니다.\");
-    } else {
-        statusMessage.textContent = '스캔 기록을 확인 중입니다...';
+  // 버튼
+  $reset5.onclick = () => {
+    round += 1; save(); renderBoard();
+    showToast("다음 5개 세트를 시작합니다!");
+  };
 
-        // Firebase Cloud Function으로 POST 요청을 보냅니다.
-        // CORS 문제를 해결하기 위해 POST 요청을 사용합니다.
-        fetch(firebaseFunctionURL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                user_id: userId,
-                qr_id: qrId
-            }),
-        })
-        .then(response => {
-            if (!response.ok) {
-                // 응답이 성공적이지 않으면 오류를 throw합니다.
-                throw new Error('네트워크 응답이 실패했습니다.');
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.status === 'success') {
-                // 성공적으로 응답을 받았을 때 UI를 업데이트합니다.
-                if (data.is_new_scan) {
-                    statusMessage.textContent = '새로운 QR코드를 스캔했습니다!';
-                } else {
-                    statusMessage.textContent = '이미 스캔한 QR코드입니다.';
-                }
-                scanCount.textContent = data.total_scans;
+  $resetAll.onclick = () => {
+    if (!confirm("전체 초기화할까요? (모든 기록 삭제)")) return;
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_ROUNDS);
+    location.reload();
+  };
 
-                // 목표 횟수에 도달했는지 확인합니다.
-                if (data.total_scans >= rewardGoal) {
-                    rewardMessage.classList.remove('hidden');
-                    rewardButton.classList.remove('hidden');
-                    statusMessage.textContent = '축하합니다!';
-                }
-
-            } else {
-                // 오류가 발생했을 때 메시지를 표시합니다.
-                statusMessage.textContent = `오류: ${data.message}`;
-                console.error('Firebase Cloud Function에서 오류가 발생했습니다:', data.message);
-            }
-        })
-        .catch(error => {
-            // 네트워크 오류 또는 기타 예외를 처리합니다.
-            statusMessage.textContent = '네트워크 오류가 발생했습니다. 다시 시도해 주세요.';
-            console.error('Fetch 오류:', error);
-        });
-    }
-
-    // 커스텀 모달 창을 생성하는 함수
-    function showModal(message) {
-        let modal = document.getElementById(modalId);
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = modalId;
-            modal.className = 'modal-overlay';
-            modal.innerHTML = `
-                <div class="modal-content">
-                    <p>${message}</p>
-                    <button class="modal-button">확인</button>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            modal.querySelector('.modal-button').addEventListener('click', () => {
-                modal.remove();
-            });
-        }
-    }
-
-    // 리워드 받기 버튼 클릭 이벤트 핸들러
-    rewardButton.addEventListener('click', () => {
-        const authKey = `${userId}-${rewardGoal}`; // 간단한 인증 키 생성
-        showModal(`리워드 수령을 위해 이 화면을 운영본부에 보여주세요.<br>인증번호: **${authKey}**`);
-    });
+  // 시작
+  renderBoard();
+  tryStamp(booth);
 </script>
 </body>
 </html>
-
-
