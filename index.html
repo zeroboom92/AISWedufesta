@@ -185,21 +185,26 @@
 
   // 간식 수령하기
   $redeem.onclick = () => {
-    if (stampsInCurrentCycle() < SET_SIZE) {
-      showToast("아직 도장이 부족합니다.");
-      return;
-    }
-    const pwd = prompt("관리자 비밀번호를 입력하세요.");
-    if (pwd === null) return;
-    if (pwd !== ADMIN_PASS) {
-      alert("비밀번호가 올바르지 않습니다.");
-      return;
-    }
-    redeemedCount += 1; // 한 세트 차감 → 다음 세트 대기
-    save();
-    render();
-    alert("수령 처리되었습니다. 다음 세트를 시작하세요!");
-  };
+  if (stampsInCurrentCycle() < SET_SIZE) {
+    showToast("아직 도장이 부족합니다.");
+    return;
+  }
+  const pwd = prompt("관리자 비밀번호를 입력하세요.");
+  if (pwd === null) return;
+  if (pwd !== ADMIN_PASS) {
+    alert("비밀번호가 올바르지 않습니다.");
+    return;
+  }
+
+  // ✅ 완전 초기화
+  scanned.clear();        // 지금까지 찍은 QR 모두 삭제
+  redeemedCount = 0;      // 수령 횟수도 초기화
+  save();
+  render();
+
+  alert("남은 시간도 즐겁게 참여해보세요!");
+};
+
 
   // ===== 시작 =====
   render();
@@ -207,4 +212,5 @@
 </script>
 </body>
 </html>
+
 
