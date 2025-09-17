@@ -60,6 +60,8 @@
   <div id="toast" class="toast"></div>
 
 <script>
+document.addEventListener('DOMContentLoaded', () => {  // ✅ DOM 준비 후 실행
+
   // ===== 설정값 =====
   const BANNER_URL = "./banner.png";
   const SET_SIZE   = 5;
@@ -77,8 +79,14 @@
   const $redeem    = document.querySelector("#redeem");
   const $toast     = document.querySelector("#toast");
 
+  // 방어: 핵심 DOM이 없으면 즉시 메시지
+  if (!$board || !$progress) {
+    alert("필수 요소가 없습니다(#board, #progress). HTML 구조를 확인해주세요.");
+    return;
+  }
+
   // ===== 초기 상태 =====
-  $banner.src = BANNER_URL;
+  if ($banner) $banner.src = BANNER_URL;
 
   const PARAMS = new URLSearchParams(location.search);
   const boothParam = PARAMS.get("booth");
@@ -99,6 +107,7 @@
   }
 
   function showToast(msg) {
+    if (!$toast) return;
     $toast.textContent = msg;
     $toast.style.display = "block";
     setTimeout(() => $toast.style.display = "none", 1400);
@@ -108,6 +117,7 @@
     const inCycle = stampsInCurrentCycle();
     const remaining = SET_SIZE - inCycle;
 
+    // 스탬프 보드 그리기
     $board.innerHTML = "";
     for (let i = 0; i < MAX_SLOTS; i++) {
       const div = document.createElement("div");
@@ -115,6 +125,7 @@
       $board.appendChild(div);
     }
 
+    // 진행 안내
     if (remaining > 0) {
       $progress.innerHTML = `
         <span style="font-size: 22px; color: #4285f4; font-weight: 700;">${remaining}</span>개의 QR코드를 더 모으고<br>
@@ -129,17 +140,67 @@
       `;
     }
 
-    $redeem.disabled = inCycle < SET_SIZE;
-    $redeem.style.opacity = inCycle < SET_SIZE ? 0.6 : 1;
+    // 버튼 상태
+    const canClaim = inCycle >= SET_SIZE;
+    if ($redeem) {
+      $redeem.disabled = !canClaim;
+      $redeem.style.opacity = canClaim ? 1 : 0.6;
+    }
   }
 
   function tryStamp(boothCode) {
-    if (!boothCode) { render(); retur요!");
-  };
+    render();                       // 먼저 보드 표시
+    if (!boothCode) return;         // 파라미터 없으면 여기서 종료
 
-  // ===== 시작 =====
-  render();
+    const key = String(boothCode).trim().toUpperCase();
+    if (scanned.has(key)) {
+      showToast("이미 찍은 QR입니다.");
+      return;
+    }
+
+    scanned.add(key);
+    save();
+    render();
+
+    if (stampsInCurrentCycle() >= SET_SIZE) {
+      showToast("5개 달성! 운영본부로 가세요.");
+    } else {
+      showToast("도장을 추가했어요!");
+    }
+  }
+
+  // 간식 수령(완전 초기화)
+  if ($redeem) {
+    $redeem.onclick = () => {
+      if (stampsInCurrentCycle() < SET_SIZE) {
+        showToast("아직 도장이 부족합니다.");
+        return;
+      }
+      const pwd = prompt("관리자 비밀번호를 입력하세요.");
+      if (pwd === null) return;
+      if (pwd !== ADMIN_PASS) {
+        alert("비밀번호가 올바르지 않습니다.");
+        return;
+      }
+      scanned.clear();
+      redeemedCount = 0;
+      save();
+      render();
+      alert("수령 처리 및 전체 기록이 초기화되었습니다. 새로운 세트를 시작하세요!");
+    };
+  }
+
+  // 시작
   tryStamp(boothParam);
+});  // DOMContentLoaded 끝
+
+// ✅ 전역 에러를 화면에 띄워서 원인 파악 쉽게
+window.addEventListener('error', (e) => {
+  const box = document.getElementById('progress');
+  if (box) box.innerText = '스크립트 오류: ' + e.message;
+});
 </script>
+
 </body>
 </html>
+
