@@ -47,7 +47,8 @@
 
     <!-- ✅ 추가된 안내 박스 -->
     <div id="surveyNotice" class="notice" style="background:#eaf4ff; color:#004085;">
-      운영본부에서 만족도조사 하고 기념품 받아가세요!
+      운영본부에서 만족도조사 하고<br> 
+      기념품 받아가세요!
     </div>
 
     <div id="board" class="board"></div>
@@ -129,8 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {  // ✅ DOM 준비 후 실
     if (remaining > 0) {
       $progress.innerHTML = `
         <span style="font-size: 22px; color: #4285f4; font-weight: 700;">${remaining}</span>개의 QR코드를 더 모으고<br>
-        운영본부에 와서<br>
-        간식꾸러미를 받으세요
+        운영본부에 와서 간식꾸러미를 받으세요
       `;
     } else {
       $progress.innerHTML = `
@@ -203,4 +203,5 @@ window.addEventListener('error', (e) => {
 
 </body>
 </html>
+
 
