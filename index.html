@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>2025년 AI SW 에듀 페스타</title>
+<title>2025년 AI·SW 에듀 페스타</title>
 <style>
   :root { --maxw: 540px; }
   body { font-family: 'Nanum Gothic', sans-serif;
@@ -12,25 +12,16 @@
   .banner { width: 100vw; max-width: 100%; height: auto; display: block; object-fit: cover; }
   h1 { font-size: 26px; margin: 20px 0 20px; text-align: center; font-weight: 700; }
   .notice { background: #ffffff; padding: 20px; border-radius: 12px; line-height: 1.4; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; text-align: left; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; text-align: center; 
             font-size: 16px; font-weight: 500; }
   .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 20px 0; 
            max-width: 400px; margin-left: auto; margin-right: auto; }
-/* 도장 이미지 스타일 */
-  .slot {
-  border: 0;
-  border-radius: 50%;
-  aspect-ratio: 1/1;
-  min-height: 100px;
-  background: #ffffff center/85% no-repeat url("./stamp_empty.png"); /* 회색 도장 */
-  box-shadow: 0 0 0 3px #e9ecef inset;
-  }
-  .filled {
-  background: #ffffff center/85% no-repeat url("./stamp_filled.png"); /* 파란 도장 */
-  box-shadow: none;
-  }
+  .slot { border: 0; border-radius: 50%; aspect-ratio: 1/1;
+          min-height: 100px;
+          background: #ffffff center/70% no-repeat url("./stamp_empty.png");
+          box-shadow: 0 0 0 3px #e9ecef inset; }
+  .filled { background: #ffffff center/70% no-repeat url("./stamp_filled.png"); box-shadow: none; }
   .filled::before { content: none; }
-
   button { padding: 16px; border: 0; border-radius: 25px; font-weight: 700; cursor: pointer; 
            font-size: 16px; transition: all 0.2s; width: 100%; margin-top: 14px; }
   .primary { background: #4285f4; color: white; }
@@ -41,7 +32,6 @@
            font-size: 14px; display: none; }
 </style>
 
-<!-- (선택) Google Fonts 로드: 나눔고딕 -->
 <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -51,13 +41,16 @@
   </header>
 
   <main style="padding-top:12px;">
-    <h1>2025년 AI SW 에듀 페스타</h1>
+    <h1>2025년 AI·SW 에듀 페스타</h1>
 
     <div id="progress" class="notice">불러오는 중…</div>
-    <div id="board" class="board"></div>
 
-    <!-- ✅ 추가: 만족도 조사 버튼 (간식 수령하기 위) -->
-    <button id="survey" class="primary">만족도 조사 실시하기</button>
+    <!-- ✅ 추가된 안내 박스 -->
+    <div id="surveyNotice" class="notice" style="background:#eaf4ff; color:#004085;">
+      운영본부에서 만족도조사 하고 기념품 받아가세요!
+    </div>
+
+    <div id="board" class="board"></div>
 
     <button id="redeem" class="primary">간식 수령하기</button>
     
@@ -68,11 +61,10 @@
 
 <script>
   // ===== 설정값 =====
-  const BANNER_URL = "./banner.png";  // index.html과 같은 폴더
+  const BANNER_URL = "./banner.png";
   const SET_SIZE   = 5;
   const MAX_SLOTS  = 5;
   const ADMIN_PASS = "0425";
-  const SURVEY_URL = "https://forms.gle/PjKRBLP84jSSzjGB8"; // ✅ 여기를 실제 설문 URL로 교체
 
   // ===== 저장 키 =====
   const STORAGE_SCANNED   = "qr_stamp_scanned_booths";
@@ -82,7 +74,6 @@
   const $banner    = document.querySelector("#banner");
   const $board     = document.querySelector("#board");
   const $progress  = document.querySelector("#progress");
-  const $survey    = document.querySelector("#survey");
   const $redeem    = document.querySelector("#redeem");
   const $toast     = document.querySelector("#toast");
 
@@ -117,7 +108,6 @@
     const inCycle = stampsInCurrentCycle();
     const remaining = SET_SIZE - inCycle;
 
-    // 스탬프 보드
     $board.innerHTML = "";
     for (let i = 0; i < MAX_SLOTS; i++) {
       const div = document.createElement("div");
@@ -125,86 +115,27 @@
       $board.appendChild(div);
     }
 
-    // 진행 안내
     if (remaining > 0) {
       $progress.innerHTML = `
         <span style="font-size: 22px; color: #4285f4; font-weight: 700;">${remaining}</span>개의 QR코드를 더 모으고<br>
         운영본부에 와서<br>
-        간식바구니를 받으세요
+        간식꾸러미를 받으세요
       `;
     } else {
       $progress.innerHTML = `
         <span style="color: #4285f4; font-weight: 700; font-size: 18px;">축하합니다!</span><br>
         운영본부에 와서<br>
-        간식바구니를 받으세요
+        간식꾸러미를 받으세요
       `;
     }
 
-    // 버튼 활성/비활성
-    const canClaim = inCycle >= SET_SIZE;
-    [$survey, $redeem].forEach(btn => {
-      btn.disabled = !canClaim;
-      btn.style.opacity = canClaim ? 1 : 0.6;
-    });
+    $redeem.disabled = inCycle < SET_SIZE;
+    $redeem.style.opacity = inCycle < SET_SIZE ? 0.6 : 1;
   }
 
   function tryStamp(boothCode) {
-    if (!boothCode) { render(); return; }
-    const key = String(boothCode).trim().toUpperCase();
-
-    if (scanned.has(key)) {
-      showToast("이미 찍은 QR입니다.");
-      render();
-      return;
-    }
-
-    scanned.add(key);
-    save();
-    render();
-
-    if (stampsInCurrentCycle() >= SET_SIZE) {
-      showToast("5개 달성! 만족도 조사 → 간식 수령하기 순서로 진행해주세요.");
-    } else {
-      showToast("도장을 추가했어요!");
-    }
-  }
-
-  // ===== 버튼 동작 =====
-  // 만족도 조사
-  $survey.onclick = () => {
-    if (stampsInCurrentCycle() < SET_SIZE) {
-      showToast("QR코드 5개를 찍어야 합니다.");
-      return;
-    }
-    if (!SURVEY_URL || SURVEY_URL.includes("예시설문링크")) {
-      alert("설문 링크가 설정되지 않았습니다. SURVEY_URL을 실제 주소로 바꿔주세요.");
-      return;
-    }
-    window.open(SURVEY_URL, "_blank"); // 새 탭으로 설문 열기
+    if (!boothCode) { render(); retur요!");
   };
-
-  // 간식 수령하기
-  $redeem.onclick = () => {
-  if (stampsInCurrentCycle() < SET_SIZE) {
-    showToast("아직 도장이 부족합니다.");
-    return;
-  }
-  const pwd = prompt("관리자 비밀번호를 입력하세요.");
-  if (pwd === null) return;
-  if (pwd !== ADMIN_PASS) {
-    alert("비밀번호가 올바르지 않습니다.");
-    return;
-  }
-
-  // ✅ 완전 초기화
-  scanned.clear();        // 지금까지 찍은 QR 모두 삭제
-  redeemedCount = 0;      // 수령 횟수도 초기화
-  save();
-  render();
-
-  alert("남은 시간도 즐겁게 참여해보세요!");
-};
-
 
   // ===== 시작 =====
   render();
@@ -212,7 +143,3 @@
 </script>
 </body>
 </html>
-
-
-
-
