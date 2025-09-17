@@ -20,7 +20,7 @@
           min-height: 100px;
           background: #ffffff center/70% no-repeat url("./stamp_empty.png");
           box-shadow: 0 0 0 3px #e9ecef inset; }
-  .filled { background: #ffffff center/70% no-repeat url("./stamp_filled.png"); box-shadow: none; }
+  .filled { background: #ffffff center/85% no-repeat url("./stamp_filled.png"); box-shadow: none; }
   .filled::before { content: none; }
   button { padding: 16px; border: 0; border-radius: 25px; font-weight: 700; cursor: pointer; 
            font-size: 16px; transition: all 0.2s; width: 100%; margin-top: 14px; }
@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {  // ✅ DOM 준비 후 실
     // 진행 안내
     if (remaining > 0) {
       $progress.innerHTML = `
-        <span style="font-size: 22px; color: #4285f4; font-weight: 700;">${remaining}</span>개의 QR코드를 더 모으고<br>
+        <span style="font-size: 25px; color: #4285f4; font-weight: 700;">${remaining}</span>개의 QR코드를 더 모으고<br>
         운영본부에 와서 간식꾸러미를 받으세요
       `;
     } else {
@@ -203,5 +203,6 @@ window.addEventListener('error', (e) => {
 
 </body>
 </html>
+
 
 
