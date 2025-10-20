@@ -27,6 +27,14 @@ footer { margin: 0 calc(50vw - min(50vw, var(--maxw)/2)); } /* 상단 배너처�
     transition: all 0.3s ease;
   }
 
+  @media (max-width: 500px) {
+    .character {
+      right: 10px; 
+      width: 90px;
+    }
+  }
+
+  
 .character.hidden {
   opacity: 0;
   transform: translateY(10px);
@@ -246,6 +254,7 @@ window.addEventListener('error', (e) => {
 
 </body>
 </html>
+
 
 
 
