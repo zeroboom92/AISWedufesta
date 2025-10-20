@@ -17,14 +17,16 @@ footer { margin: 0 calc(50vw - min(50vw, var(--maxw)/2)); } /* 상단 배너처�
 .banner-bottom { width: 100vw; max-width: 100%; height: auto; display: block; object-fit: cover; margin-top: 20px; }
 
   .character {
-    position: fixed;          /* 화면 고정 */
-    bottom: 24px;             /* 아래 여백 */
-    right: 12px;              /* 오른쪽 여백 */
-    width: 120px;             /* 크기 조절 가능 */
+    position: fixed;     /* 화면 기준으로 고정 */
+    top: 50%;            /* 세로 중앙 근처 */
+    right: calc(50% - var(--maxw)/2 - 100px); 
+    transform: translateY(-50%);
+    width: 120px;        /* 크기 조절 가능 */
+    z-index: 100;
     opacity: 0.95;
-    z-index: 100;             /* 다른 요소 위로 */
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    transition: all 0.3s ease;
   }
+
 .character.hidden {
   opacity: 0;
   transform: translateY(10px);
@@ -244,6 +246,7 @@ window.addEventListener('error', (e) => {
 
 </body>
 </html>
+
 
 
 
