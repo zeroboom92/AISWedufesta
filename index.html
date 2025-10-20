@@ -37,10 +37,10 @@
   }
   .slot {
     border: 0; border-radius: 50%; aspect-ratio: 1/1; min-height: 100px;
-    background: #ffffff center/50% no-repeat url("./stamp_empty.png"); /* 크기 복원 */
+    background: #ffffff center/70% no-repeat url("./stamp_empty.png"); /* 크기 복원 */
     box-shadow: 0 0 0 3px #e9ecef inset;
   }
-  .filled { background: #ffffff center/55% no-repeat url("./stamp_filled.png"); box-shadow: none; }
+  .filled { background: #ffffff center/85% no-repeat url("./stamp_filled.png"); box-shadow: none; }
   .filled::before { content: none; }
 
   /* 캐릭터: 보드 내부 절대배치(3번째 아래 + 5번째 오른쪽) */
@@ -143,8 +143,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const r5 = slots[4].getBoundingClientRect();
     const wrap = $board.getBoundingClientRect(); // board 영역 기준
 
-    const top  = (r3.bottom - wrap.top) + 8;   // 3번째 아래쪽 여백
-    const left = (r5.right  - wrap.left) + 8;  // 5번째 오른쪽 여백
+    const top  = (r3.bottom - wrap.top) + 16;   // 3번째 아래쪽 여백
+    const left = (r5.right  - wrap.left) + 24;  // 5번째 오른쪽 여백
 
     $character.style.top  = `${top}px`;
     $character.style.left = `${left}px`;
@@ -231,3 +231,4 @@ window.addEventListener('error', (e) => {
 </script>
 </body>
 </html>
+
