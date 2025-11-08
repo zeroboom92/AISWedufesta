@@ -219,6 +219,24 @@ document.addEventListener('DOMContentLoaded', () => {
   render();
   tryStamp(boothParam);
 
+  // ✅ Safari(iPhone)에서 캐시된 페이지 복귀 시에도 QR 처리 재실행
+function processTokenFromURL() {
+  const params = new URLSearchParams(location.search);
+  const token = params.get("token") || params.get("booth");
+  if (token) tryStamp(token);
+}
+
+// 페이지가 캐시에서 복귀될 때 (bfcache)
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) processTokenFromURL();
+});
+
+// 탭이 다시 보일 때 (백그라운드 → 포그라운드)
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) processTokenFromURL();
+});
+
+  
   // 창 크기 변경 시 재배치
   window.addEventListener("resize", positionCharacter);
 });
@@ -231,4 +249,5 @@ window.addEventListener('error', (e) => {
 </script>
 </body>
 </html>
+
 
